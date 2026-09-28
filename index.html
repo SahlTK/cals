@@ -1,4 +1,4 @@
-<title>tester</title>
+<title>Cals</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Cals">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1775,7 +1775,7 @@ var DB=[
 ["Buckwheat kasha, cooked",110,4,21,1.1,[["1 cup (170 g)",170],["100 g",100]]],
 ["Borodinsky rye bread",208,6.8,40,1.3,[["1 slice",35],["2 slices",70]]],
 ["Tvorog, 5%",121,17,3,5,[["1 pack (200 g)",200],["100 g",100]]],
-["Smetana, 20%",205,2.8,3.4,20,[["1 tbsp",25],["100 g",100]]],
+["Smetana (Russian sour cream), 20%",205,2.8,3.4,20,[["1 tbsp",25],["100 g",100]]],
 ["Kefir, 1%",40,3,4,1,[["1 cup (250 ml)",250],["100 ml",100]]],
 ["Ryazhenka, 4%",65,3,4.2,4,[["1 cup (250 ml)",250],["1 bottle (450 ml)",450],["100 ml",100]]],
 ["Salo, cured pork fat",800,2.4,0,89,[["1 slice",20],["100 g",100]]],
@@ -2156,7 +2156,70 @@ var DB=[
 ["Digestive biscuit",480,7,62,22,[["1 biscuit",15],["3 biscuits",45]]],
 ["Ice cream, vanilla",207,3.5,24,11,[["1 scoop",66],["2 scoops",132]]],
 ["Protein bar",350,30,35,10,[["1 bar",60],["half",30]]],
-["Popcorn, plain",387,13,78,4.5,[["1 cup",8],["1 bag (40 g)",40]]]
+["Popcorn, plain",387,13,78,4.5,[["1 cup",8],["1 bag (40 g)",40]]],
+/* world dishes + breakfast gaps (est. where composite) */
+["Paella, seafood (est.)",150,9,17,5,[["100 g",100],["1 plate (350 g)",350],["large plate (500 g)",500]]],
+["Poke bowl, salmon (est.)",145,11,14,5,[["1 bowl (400 g)",400],["100 g",100],["large bowl (550 g)",550]]],
+["Gyro wrap (est.)",215,13,20,9,[["1 wrap (280 g)",280],["100 g",100]]],
+["Chicken tagine (est.)",130,12,8,5,[["1 plate (350 g)",350],["100 g",100]]],
+["Jollof rice (est.)",165,3.5,27,5,[["1 plate (250 g)",250],["100 g",100],["large plate (400 g)",400]]],
+["Injera",130,4,27,0.5,[["1 piece (120 g)",120],["100 g",100]]],
+["Bibimbap (est.)",135,6,18,4,[["1 bowl (450 g)",450],["100 g",100]]],
+["Chili con carne (est.)",130,9,10,5.5,[["1 bowl (350 g)",350],["100 g",100]]],
+["Kimchi",23,1.7,4,0.5,[["1 side (60 g)",60],["100 g",100]]],
+["Miso soup",35,2.5,3.5,1,[["1 bowl (240 g)",240],["100 g",100]]],
+["Tempeh",193,19,9,11,[["100 g",100],["1 serving (85 g)",85]]],
+["Seitan",145,25,8,2,[["100 g",100],["1 serving (85 g)",85]]],
+["Udon noodles, cooked",125,3,26,0.5,[["1 portion (200 g)",200],["100 g",100]]],
+["Soba noodles, cooked",99,5,21,0.1,[["1 portion (200 g)",200],["100 g",100]]],
+["Lobster, steamed",89,19,0,0.9,[["100 g",100],["1 tail (145 g)",145]]],
+["Polenta, cooked",70,1.6,15,0.3,[["1 portion (200 g)",200],["100 g",100]]],
+["Pearl barley, cooked",123,2.3,28,0.4,[["1 portion (160 g)",160],["100 g",100]]],
+["Farro, cooked",130,5,26,1,[["1 portion (160 g)",160],["100 g",100]]],
+["Beef jerky",410,33,11,26,[["1 bag (50 g)",50],["100 g",100],["small pack (28 g)",28]]],
+["Quesadilla, cheese (est.)",290,13,25,15,[["1 quesadilla (180 g)",180],["100 g",100]]],
+["Burrito bowl, chicken (est.)",140,10,15,4,[["1 bowl (450 g)",450],["100 g",100]]],
+["BLT sandwich (est.)",245,11,24,11,[["1 sandwich (190 g)",190],["100 g",100]]],
+["Potato salad",195,2,15,14,[["1 side (150 g)",150],["100 g",100]]],
+["Tzatziki",90,3,4,7,[["2 tbsp (60 g)",60],["100 g",100]]],
+["Salsa",36,1.5,7,0.2,[["2 tbsp (32 g)",32],["100 g",100]]],
+["Overnight oats, plain (est.)",145,5,22,4,[["1 jar (300 g)",300],["100 g",100]]],
+["Acai bowl (est.)",130,2,22,4,[["1 bowl (350 g)",350],["100 g",100]]],
+["Porridge, made with water",71,2.4,12,1.5,[["1 bowl (250 g)",250],["100 g",100]]],
+["Porridge, made with milk",116,4.7,14,4.5,[["1 bowl (250 g)",250],["100 g",100]]],
+["Banana bread",330,4.5,50,12.5,[["1 slice (75 g)",75],["100 g",100]]],
+["Scone, plain",360,7,54,13,[["1 scone (70 g)",70],["100 g",100]]],
+["Crumpet",180,6,36,0.8,[["1 crumpet (60 g)",60],["2 crumpets (120 g)",120]]],
+["English muffin",230,8,45,1.8,[["1 muffin (60 g)",60],["100 g",100]]],
+["Brioche",360,8.5,50,14,[["1 slice (40 g)",40],["100 g",100]]],
+["Sourdough bread",260,9,51,1.5,[["1 slice (50 g)",50],["100 g",100]]],
+["Smoothie, mixed berry (est.)",60,1,13,0.4,[["1 glass (350 g)",350],["100 g",100]]],
+["Green smoothie (est.)",55,1.5,11,0.5,[["1 glass (350 g)",350],["100 g",100]]],
+/* branded drinks, chocolate and crisps - published label values, stored per serving */
+["Coca-Cola",139,0,35,0,[["1 can (330 ml)",1],["small bottle (500 ml)",1.5],["glass (250 ml)",0.76]],1],
+["Coca-Cola Zero",1,0,0,0,[["1 can (330 ml)",1],["small bottle (500 ml)",1.5]],1],
+["Diet Coke",1,0,0,0,[["1 can (330 ml)",1],["small bottle (500 ml)",1.5]],1],
+["Pepsi Max",2,0,0.2,0,[["1 can (330 ml)",1],["small bottle (500 ml)",1.5]],1],
+["Sprite",132,0,33,0,[["1 can (330 ml)",1],["small bottle (500 ml)",1.5]],1],
+["Red Bull",112,0,28,0,[["1 can (250 ml)",1],["large can (355 ml)",1.42]],1],
+["Red Bull sugarfree",8,0,1.5,0,[["1 can (250 ml)",1],["large can (355 ml)",1.42]],1],
+["Monster Energy",210,0,54,0,[["1 can (500 ml)",1],["half can (250 ml)",0.5]],1],
+["Monster Ultra, zero sugar",10,0,3,0,[["1 can (500 ml)",1],["half can (250 ml)",0.5]],1],
+["Gatorade",130,0,33,0,[["1 bottle (500 ml)",1],["half bottle (250 ml)",0.5]],1],
+["KitKat, 4-finger",233,2.8,27.6,12.1,[["1 bar (45 g)",1],["2 bars",2]],1],
+["Mars bar",228,2.2,35,8.5,[["1 bar (51 g)",1],["2 bars",2]],1],
+["Bounty",278,2.3,33,15,[["1 pack (57 g)",1],["single bar",0.5]],1],
+["Maltesers",187,2.8,22.5,9.2,[["1 bag (37 g)",1],["large bag (100 g)",2.7]],1],
+["M&M's, milk chocolate",220,2,31,9,[["1 bag (45 g)",1],["large bag (100 g)",2.2]],1],
+["Ferrero Rocher",219,3,16.5,15.8,[["3 pieces",1],["1 piece",0.33]],1],
+["Haribo Goldbears",343,6.9,77,0.5,[["1 bag (100 g)",1],["small bag (30 g)",0.3]],1],
+["Pringles Original",536,4,52,34,[["100 g",1],["small can (40 g)",0.4],["large can (165 g)",1.65]],1],
+["Doritos Nacho Cheese",498,7,60,25,[["100 g",1],["small bag (45 g)",0.45]],1],
+["Lay's Classic",536,6,53,33,[["100 g",1],["small bag (28 g)",0.28]],1],
+["Nutella",539,6.3,57.5,30.9,[["100 g",1],["1 tbsp (15 g)",0.15],["2 tbsp (30 g)",0.3]],1],
+["Sour cream",198,2.4,4.6,19.4,[["1 tbsp (12 g)",12],["2 tbsp (24 g)",24],["100 g",100]]],
+["Sour cream, light",135,3,5,11,[["1 tbsp (12 g)",12],["2 tbsp (24 g)",24],["100 g",100]]],
+["Sour cream, fat free",74,3,15,0,[["1 tbsp (12 g)",12],["2 tbsp (24 g)",24],["100 g",100]]]
 ];
 
 /* exercise: [name, MET] */
@@ -3141,6 +3204,35 @@ function openSearch(meal){
   renderSearch();
   focusSoon("#srchin");
 }
+var SYN={coke:["cola"],cokes:["cola"],yogurt:["yoghurt"],yoghurt:["yogurt"],
+eggplant:["aubergine"],aubergine:["eggplant"],zucchini:["courgette"],courgette:["zucchini"],
+oatmeal:["oat","porridge"],porridge:["oat"],prawn:["shrimp"],prawns:["shrimp"],shrimp:["prawn"],
+ground:["mince","minced"],mince:["ground"],soda:["cola","lemon-lime"],pop:["soda","cola"],
+fizzy:["soda","cola"],crisps:["chips"],chips:["crisps","fries"],fries:["chips"],
+garbanzo:["chickpea"],capsicum:["pepper"],maize:["corn"],rocket:["arugula"],arugula:["rocket"],
+cilantro:["coriander"],coriander:["cilantro"],chili:["chilli"],chilli:["chili"],lite:["light"],
+diet:["zero","sugar free","light"],zero:["diet","sugar free","no sugar"],
+sugarfree:["sugar free","zero","diet"],fizz:["soda","cola"]};
+function tokVars(t){
+  var v=[t];
+  if(SYN[t]) v=v.concat(SYN[t]);
+  if(t.length>3&&t.charAt(t.length-1)==="s") v.push(t.slice(0,-1));
+  return v;
+}
+function matchScore(name,q){
+  var n=name.toLowerCase(),whole=n.indexOf(q);
+  if(whole>=0) return whole===0?-1:0;
+  var toks=q.split(/[^a-z0-9']+/).filter(Boolean);
+  if(!toks.length) return null;
+  var first=-1;
+  for(var i=0;i<toks.length;i++){
+    var vs=tokVars(toks[i]),hit=-1;
+    for(var j=0;j<vs.length;j++){ var k=n.indexOf(vs[j]); if(k>=0&&(hit<0||k<hit)) hit=k; }
+    if(hit<0) return null;
+    if(i===0) first=hit;
+  }
+  return first===0?1:2;
+}
 function searchResults(){
   var q=$("#srchin").value.trim().toLowerCase(),out=[];
   if(srchFilter==="recent"){
@@ -3161,9 +3253,8 @@ function searchResults(){
     return out.slice(0,60);
   }
   var scored=out.map(function(f){
-    var n=f.n.toLowerCase(),i=n.indexOf(q);
-    if(i<0) return null;
-    return {f:f,s:(i===0?0:(n[i-1]===" "?1:2))};
+    var sc=matchScore(f.n,q);
+    return sc===null?null:{f:f,s:sc};
   }).filter(Boolean).sort(function(a,b){return a.s-b.s;});
   return scored.map(function(x){return x.f;}).slice(0,60);
 }
