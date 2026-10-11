@@ -1254,6 +1254,8 @@ section>.eyebrow:first-child{margin-top:14px}
 .bmiticks span:last-child{transform:translateX(-100%)}
 .bmirange{font-size:13.5px;line-height:1.5;color:var(--text-2);margin:16px 0 0}
 .bminote{font-size:12px;line-height:1.6;color:var(--muted);margin:9px 0 0}
+.offhdr{list-style:none;padding:14px 2px 4px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;opacity:.5}
 </style>
 <div class="shell">
   <header class="top">
@@ -2260,7 +2262,20 @@ var DB=[
 ["Chow mein, fried noodles",200,7,26,8,[["1 plate (300 g)",300],["100 g",100]]],
 ["Donut, jam filled",350,5,45,17,[["1 donut (75 g)",75],["100 g",100]]],
 ["Fried pickles",290,4,30,17,[["1 portion (85 g)",85],["100 g",100]]],
-["Mushrooms, breaded and fried",270,5,25,17,[["1 portion (90 g)",90],["100 g",100]]]
+["Mushrooms, breaded and fried",270,5,25,17,[["1 portion (90 g)",90],["100 g",100]]],
+/* matcha + green tea */
+["Matcha powder",324,30,39,5,[["1 tsp (2 g)",2],["2 tsp (4 g)",4],["100 g",100]]],
+["Matcha latte, whole milk",62,3.2,4.9,3.3,[["medium (350 ml)",350],["small (240 ml)",240],["large (470 ml)",470]]],
+["Matcha latte, skim milk",40,3.4,5,0.2,[["medium (350 ml)",350],["small (240 ml)",240],["large (470 ml)",470]]],
+["Matcha latte, oat milk",58,1.2,8.5,2.2,[["medium (350 ml)",350],["small (240 ml)",240],["large (470 ml)",470]]],
+["Matcha latte, sweetened (est.)",85,2.6,13.5,2.4,[["medium (350 ml)",350],["small (240 ml)",240],["large (470 ml)",470]]],
+["Iced matcha latte (est.)",55,2,7.5,1.8,[["medium (350 ml)",350],["large (470 ml)",470]]],
+["Matcha ice cream",205,3.5,25,10,[["1 scoop (70 g)",70],["100 g",100],["2 scoops (140 g)",140]]],
+["Green tea, brewed",1,0,0,0,[["1 cup (240 ml)",240],["large (350 ml)",350],["100 ml",100]]],
+["Matcha tea, water only",6,0.6,0.8,0.1,[["1 cup (240 ml)",1],["large (350 ml)",1.4]],1],
+["Starbucks matcha latte, grande",240,12,34,7,[["grande (473 ml)",1],["tall (355 ml)",0.75],["venti (591 ml)",1.25]],1],
+["Matcha frappuccino, grande (est.)",420,11,69,11,[["grande (473 ml)",1],["tall (355 ml)",0.75]],1],
+["KitKat matcha, 2-finger",109,1.3,12.6,5.9,[["1 bar (21 g)",1],["2 bars",2]],1]
 ];
 
 /* exercise: [name, MET] */
@@ -2593,12 +2608,14 @@ function dbFood(i){ var r=DB[i]; return {key:"db:"+i,n:r[0],k:r[1],p:r[2],c:r[3]
 function myFood(id){
   var m=null; state.myFoods.forEach(function(x){ if(x.id===id) m=x; });
   if(!m) return null;
-  return {key:"my:"+id,n:m.n,k:m.k,p:m.p||0,c:m.c||0,f:m.f||0,s:[["1 serving",1]],per100:false};
+  return {key:"my:"+id,n:m.n,k:m.k,p:m.p||0,c:m.c||0,f:m.f||0,
+          s:(m.s&&m.s.length?m.s:[["1 serving",1]]),per100:!!m.per100};
 }
 function resolveKey(k){
   if(!k) return null;
   if(k.indexOf("db:")===0){ var i=+k.slice(3); return DB[i]?dbFood(i):null; }
   if(k.indexOf("my:")===0) return myFood(k.slice(3));
+  if(k.indexOf("of:")===0) return offFood(+k.slice(3));
   return null;
 }
 function amount(food,grams,qty){ return food.per100?(grams/100)*qty:grams*qty; }
@@ -3274,6 +3291,80 @@ function matchScore(name,q){
   }
   return first===0?1:2;
 }
+/* ---- Open Food Facts fallback ----
+   When the built-in list has little or nothing for a query, ask Open Food Facts.
+   Runs in the user's browser, costs nothing, needs no key. Fails silently offline. */
+var OFF={list:[],q:"",state:"idle",seq:0,cache:{},off:false};
+function offFood(i){
+  var m=OFF.list[i];
+  return m?{key:"of:"+i,n:m.n,k:m.k,p:m.p,c:m.c,f:m.f,s:m.s,per100:true}:null;
+}
+function offGrams(str){
+  if(!str) return 0;
+  var m=String(str).match(/([\d.]+)\s*(g|gr|gram|grams|ml)\b/i);
+  if(!m) return 0;
+  var v=parseFloat(m[1]);
+  return (v>0&&v<5000)?Math.round(v):0;
+}
+function offMap(p){
+  var n=(p.product_name||"").trim();
+  if(!n||n.length<2) return null;
+  var nu=p.nutriments||{};
+  var k=+nu["energy-kcal_100g"];
+  if(!(k>0)||k>900) return null;
+  var P=+nu.proteins_100g||0, C=+nu.carbohydrates_100g||0, F=+nu.fat_100g||0;
+  if(P<0||C<0||F<0||P>100||C>100||F>100) return null;
+  var br=((p.brands||"").split(",")[0]||"").trim();
+  if(br&&n.toLowerCase().indexOf(br.toLowerCase())<0) n=n+", "+br;
+  var s=[["100 g",100]];
+  var sg=offGrams(p.serving_size);
+  if(sg>0&&sg!==100) s.push(["1 serving ("+sg+" g)",sg]);
+  var pg=offGrams(p.quantity);
+  if(pg>0&&pg<=2000&&pg!==100&&pg!==sg) s.push(["whole pack ("+pg+" g)",pg]);
+  if(s.length<2) s.push(["50 g",50]);
+  return {n:n.replace(/\s+/g," ").slice(0,64),k:Math.round(k),
+          p:+P.toFixed(1),c:+C.toFixed(1),f:+F.toFixed(1),s:s};
+}
+function offFetch(q){
+  if(OFF.cache[q]){ OFF.list=OFF.cache[q]; OFF.q=q; OFF.state="done"; renderSearch(); return; }
+  var seq=++OFF.seq;
+  OFF.q=q; OFF.list=[]; OFF.state="loading"; renderSearch();
+  var url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+
+          "&search_simple=1&action=process&json=1&page_size=20"+
+          "&fields=product_name,brands,nutriments,serving_size,quantity";
+  var ctl=null; try{ ctl=new AbortController(); }catch(e){}
+  var timer=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(e){} },9000);
+  fetch(url,ctl?{signal:ctl.signal}:undefined)
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(d){
+      clearTimeout(timer);
+      if(seq!==OFF.seq) return;
+      var out=[],seen={};
+      ((d&&d.products)||[]).forEach(function(prod){
+        var m=offMap(prod); if(!m) return;
+        var kk=m.n.toLowerCase(); if(seen[kk]) return;
+        seen[kk]=1; out.push(m);
+      });
+      out=out.slice(0,12);
+      OFF.cache[q]=out; OFF.list=out; OFF.state="done";
+      renderSearch();
+    })
+    .catch(function(){
+      clearTimeout(timer);
+      if(seq!==OFF.seq) return;
+      OFF.list=[]; OFF.state="error"; renderSearch();
+    });
+}
+var offTimer=null;
+function offMaybe(q,localCount){
+  clearTimeout(offTimer);
+  if(OFF.off||srchFilter!=="all"||q.length<3||localCount>=8){
+    if(OFF.state!=="idle"){ OFF.state="idle"; OFF.list=[]; OFF.q=""; }
+    return;
+  }
+  if(OFF.q===q&&OFF.state!=="idle") return;   /* done, loading or failed: don't re-ask */
+  offTimer=setTimeout(function(){ offFetch(q); },500);
+}
 function searchResults(){
   var q=$("#srchin").value.trim().toLowerCase(),out=[];
   if(srchFilter==="recent"){
@@ -3299,19 +3390,33 @@ function searchResults(){
   }).filter(Boolean).sort(function(a,b){return a.s-b.s;});
   return scored.map(function(x){return x.f;}).slice(0,60);
 }
+function srchRow(f){
+  var s=f.s[0],a=amount(f,s[1],1);
+  return '<li><button class="fitem" type="button" data-fk="'+esc(f.key)+'"><span class="nm"><b>'+esc(f.n)+'</b>'+
+    '<small>'+esc(s[0])+(f.p||f.c||f.f?' · '+Math.round(f.p*a)+'P '+Math.round(f.c*a)+'C '+Math.round(f.f*a)+'F':'')+'</small></span>'+
+    '<span class="kc">'+num(f.k*a)+'<i>kcal</i></span></button></li>';
+}
 function renderSearch(){
   var res=searchResults();
-  $("#srchlist").innerHTML=res.map(function(f){
-    var s=f.s[0],a=amount(f,s[1],1);
-    return '<li><button class="fitem" type="button" data-fk="'+esc(f.key)+'"><span class="nm"><b>'+esc(f.n)+'</b>'+
-      '<small>'+esc(s[0])+(f.p||f.c||f.f?' · '+Math.round(f.p*a)+'P '+Math.round(f.c*a)+'C '+Math.round(f.f*a)+'F':'')+'</small></span>'+
-      '<span class="kc">'+num(f.k*a)+'<i>kcal</i></span></button></li>';
-  }).join("");
+  var q=$("#srchin").value.trim().toLowerCase();
+  var html=res.map(srchRow).join("");
+  offMaybe(q,res.length);
+  var offRows=[],showOff=(OFF.q===q&&q.length>=3&&srchFilter==="all");
+  if(showOff&&OFF.state==="done"){
+    var local={}; res.forEach(function(f){ local[f.n.toLowerCase()]=1; });
+    OFF.list.forEach(function(m,i){ if(!local[m.n.toLowerCase()]) offRows.push(offFood(i)); });
+  }
+  if(showOff&&(OFF.state==="loading"||OFF.state==="error"||offRows.length)){
+    html+='<li class="offhdr">'+(OFF.state==="loading"?"Searching Open Food Facts\u2026"
+         :(OFF.state==="error"?"Couldn\u2019t reach Open Food Facts":"From Open Food Facts"))+'</li>'
+       +offRows.map(srchRow).join("");
+  }
+  $("#srchlist").innerHTML=html;
   var e=$("#srchempty");
-  if(!res.length){
+  if(!res.length&&!offRows.length&&!(showOff&&OFF.state==="loading")){
     e.hidden=false;
     e.textContent=srchFilter==="mine"?"Nothing saved yet. Create a food and it lands here."
-      :(srchFilter==="recent"?"Nothing logged yet.":"No match. Tap \u201cCreate a food\u201d and enter it from the packet \u2014 it\u2019s saved for next time.");
+      :(srchFilter==="recent"?"Nothing logged yet.":"No match here or on Open Food Facts. Tap \u201cCreate a food\u201d and enter it from the packet \u2014 it\u2019s saved for next time.");
   }else e.hidden=true;
 }
 
@@ -3407,7 +3512,16 @@ $("#srchfilters").addEventListener("click",function(e){
 });
 $("#srchlist").addEventListener("click",function(e){
   var b=e.target.closest("[data-fk]"); if(!b) return;
-  openFood(resolveKey(b.dataset.fk),srchMeal);
+  var fk=b.dataset.fk;
+  if(fk.indexOf("of:")===0){
+    var m=OFF.list[+fk.slice(3)]; if(!m) return;
+    var nf={id:uid(),n:m.n,k:m.k,p:m.p,c:m.c,f:m.f,s:m.s,per100:true,src:"off"};
+    state.myFoods=[nf].concat(state.myFoods).slice(0,200);
+    push("myFoods");
+    openFood(myFood(nf.id),srchMeal);
+    return;
+  }
+  openFood(resolveKey(fk),srchMeal);
 });
 $("#srchnew").addEventListener("click",function(){ openNewFood(null); });
 $("#topfoods").addEventListener("click",function(e){
