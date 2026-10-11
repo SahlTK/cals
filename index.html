@@ -3294,7 +3294,7 @@ function matchScore(name,q){
 /* ---- Open Food Facts fallback ----
    When the built-in list has little or nothing for a query, ask Open Food Facts.
    Runs in the user's browser, costs nothing, needs no key. Fails silently offline. */
-var OFF={list:[],q:"",state:"idle",seq:0,cache:{},off:false};
+var OFF={list:[],q:"",state:"idle",seq:0,cache:{},off:false,why:""};
 function offFood(i){
   var m=OFF.list[i];
   return m?{key:"of:"+i,n:m.n,k:m.k,p:m.p,c:m.c,f:m.f,s:m.s,per100:true}:null;
@@ -3306,15 +3306,24 @@ function offGrams(str){
   var v=parseFloat(m[1]);
   return (v>0&&v<5000)?Math.round(v):0;
 }
+function offName(v){
+  if(!v) return "";
+  if(typeof v==="string") return v;
+  if(typeof v==="object"){
+    if(v.en) return String(v.en);
+    for(var k in v){ if(v[k]) return String(v[k]); }
+  }
+  return "";
+}
 function offMap(p){
-  var n=(p.product_name||"").trim();
+  var n=offName(p.product_name||p.product_name_en).trim();
   if(!n||n.length<2) return null;
-  var nu=p.nutriments||{};
-  var k=+nu["energy-kcal_100g"];
+  var nu=p.nutriments||p;
+  var k=+(nu["energy-kcal_100g"]!=null?nu["energy-kcal_100g"]:nu.energy_kcal_100g);
   if(!(k>0)||k>900) return null;
   var P=+nu.proteins_100g||0, C=+nu.carbohydrates_100g||0, F=+nu.fat_100g||0;
   if(P<0||C<0||F<0||P>100||C>100||F>100) return null;
-  var br=((p.brands||"").split(",")[0]||"").trim();
+  var br=((offName(p.brands)||"").split(",")[0]||"").trim();
   if(br&&n.toLowerCase().indexOf(br.toLowerCase())<0) n=n+", "+br;
   var s=[["100 g",100]];
   var sg=offGrams(p.serving_size);
@@ -3328,32 +3337,47 @@ function offMap(p){
 function offFetch(q){
   if(OFF.cache[q]){ OFF.list=OFF.cache[q]; OFF.q=q; OFF.state="done"; renderSearch(); return; }
   var seq=++OFF.seq;
-  OFF.q=q; OFF.list=[]; OFF.state="loading"; renderSearch();
-  var url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+
-          "&search_simple=1&action=process&json=1&page_size=20"+
-          "&fields=product_name,brands,nutriments,serving_size,quantity";
-  var ctl=null; try{ ctl=new AbortController(); }catch(e){}
-  var timer=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(e){} },9000);
-  fetch(url,ctl?{signal:ctl.signal}:undefined)
-    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-    .then(function(d){
-      clearTimeout(timer);
+  OFF.q=q; OFF.list=[]; OFF.state="loading"; OFF.why=""; renderSearch();
+  var urls=[
+    "https://search.openfoodfacts.org/search?q="+encodeURIComponent(q)+"&page_size=20",
+    "https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+
+      "&search_simple=1&action=process&json=1&page_size=20"
+  ];
+  function attempt(i,lastWhy){
+    if(i>=urls.length){
       if(seq!==OFF.seq) return;
-      var out=[],seen={};
-      ((d&&d.products)||[]).forEach(function(prod){
-        var m=offMap(prod); if(!m) return;
-        var kk=m.n.toLowerCase(); if(seen[kk]) return;
-        seen[kk]=1; out.push(m);
+      OFF.list=[]; OFF.state="error"; OFF.why=lastWhy||"no connection"; renderSearch(); return;
+    }
+    var ctl=null; try{ ctl=new AbortController(); }catch(e){}
+    var timer=setTimeout(function(){ try{ ctl&&ctl.abort(); }catch(e){} },9000);
+    fetch(urls[i],ctl?{signal:ctl.signal}:undefined)
+      .then(function(r){
+        if(!r.ok) throw new Error("server said "+r.status);
+        return r.json();
+      })
+      .then(function(d){
+        clearTimeout(timer);
+        if(seq!==OFF.seq) return;
+        var arr=(d&&(d.hits||d.products))||[];
+        var out=[],seen={};
+        arr.forEach(function(prod){
+          var m=offMap(prod); if(!m) return;
+          var kk=m.n.toLowerCase(); if(seen[kk]) return;
+          seen[kk]=1; out.push(m);
+        });
+        if(!out.length&&i+1<urls.length){ attempt(i+1,"no usable results"); return; }
+        out=out.slice(0,12);
+        OFF.cache[q]=out; OFF.list=out; OFF.state="done"; OFF.why=""; renderSearch();
+      })
+      .catch(function(err){
+        clearTimeout(timer);
+        if(seq!==OFF.seq) return;
+        var why=(err&&err.name==="AbortError")?"timed out"
+               :(err&&err.message?err.message:"blocked by the browser");
+        attempt(i+1,why);
       });
-      out=out.slice(0,12);
-      OFF.cache[q]=out; OFF.list=out; OFF.state="done";
-      renderSearch();
-    })
-    .catch(function(){
-      clearTimeout(timer);
-      if(seq!==OFF.seq) return;
-      OFF.list=[]; OFF.state="error"; renderSearch();
-    });
+  }
+  attempt(0,"");
 }
 var offTimer=null;
 function offMaybe(q,localCount){
@@ -3406,14 +3430,16 @@ function renderSearch(){
     var local={}; res.forEach(function(f){ local[f.n.toLowerCase()]=1; });
     OFF.list.forEach(function(m,i){ if(!local[m.n.toLowerCase()]) offRows.push(offFood(i)); });
   }
-  if(showOff&&(OFF.state==="loading"||OFF.state==="error"||offRows.length)){
-    html+='<li class="offhdr">'+(OFF.state==="loading"?"Searching Open Food Facts\u2026"
-         :(OFF.state==="error"?"Couldn\u2019t reach Open Food Facts":"From Open Food Facts"))+'</li>'
-       +offRows.map(srchRow).join("");
+  var offMsg="";
+  if(showOff){
+    if(OFF.state==="loading") offMsg="Searching Open Food Facts\u2026";
+    else if(OFF.state==="error") offMsg="Open Food Facts unavailable \u2014 "+(OFF.why||"no connection");
+    else if(OFF.state==="done") offMsg=offRows.length?"From Open Food Facts":"Open Food Facts had nothing either";
   }
+  if(offMsg) html+='<li class="offhdr">'+esc(offMsg)+'</li>'+offRows.map(srchRow).join("");
   $("#srchlist").innerHTML=html;
   var e=$("#srchempty");
-  if(!res.length&&!offRows.length&&!(showOff&&OFF.state==="loading")){
+  if(!res.length&&!offRows.length&&!offMsg){
     e.hidden=false;
     e.textContent=srchFilter==="mine"?"Nothing saved yet. Create a food and it lands here."
       :(srchFilter==="recent"?"Nothing logged yet.":"No match here or on Open Food Facts. Tap \u201cCreate a food\u201d and enter it from the packet \u2014 it\u2019s saved for next time.");
