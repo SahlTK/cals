@@ -1256,6 +1256,12 @@ section>.eyebrow:first-child{margin-top:14px}
 .bminote{font-size:12px;line-height:1.6;color:var(--muted);margin:9px 0 0}
 .offhdr{list-style:none;padding:14px 2px 4px;font-family:var(--mono);font-size:10px;
   letter-spacing:.14em;text-transform:uppercase;opacity:.5}
+.scanbox{width:100%;aspect-ratio:4/3;background:var(--surface-2);border-radius:10px;
+  overflow:hidden;display:flex;align-items:center;justify-content:center}
+.scanbox video{width:100%;height:100%;object-fit:cover}
+.scanstatus{margin-top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;
+  line-height:1.5;opacity:.7}
+.scanstatus.warn{color:var(--warn);opacity:1}
 </style>
 <div class="shell">
   <header class="top">
@@ -1505,13 +1511,30 @@ section>.eyebrow:first-child{margin-top:14px}
       <button data-f="mine">My foods</button>
     </div>
     <div class="sbody"><ul class="flist" id="srchlist"></ul><div class="srchempty" id="srchempty" hidden></div></div>
-    <div class="sfoot">
-      <button class="btn primary" id="srchnew" type="button" style="margin:0">Create a food</button>
+    <div class="sfoot" style="display:flex;gap:8px">
+      <button class="btn" id="srchscan" type="button" style="margin:0;flex:1">Scan barcode</button>
+      <button class="btn primary" id="srchnew" type="button" style="margin:0;flex:1">Create a food</button>
     </div>
   </div>
 </div>
 
 <!-- ══ food detail sheet ══ -->
+<div class="sheet" id="scansheet" hidden>
+  <div class="sheetcard"><div class="grab"></div>
+    <div class="sheethd">
+      <span class="t"><b>Scan a barcode</b><small>packaged food, straight off the label</small></span>
+      <button id="scanx" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="sbody">
+      <div id="scanbox" class="scanbox"></div>
+      <div class="scanstatus" id="scanstatus"></div>
+      <div class="searchbar" style="margin-top:14px">
+        <input id="scancode" type="tel" inputmode="numeric" placeholder="or type the barcode numbers" autocomplete="off">
+      </div>
+    </div>
+    <div class="sfoot"><button class="btn primary" id="scango" type="button" style="margin:0">Look up</button></div>
+  </div>
+</div>
 <div class="sheet" id="fdsheet" hidden>
   <div class="sheetcard"><div class="grab"></div>
     <div class="sheethd">
@@ -3379,6 +3402,90 @@ function offFetch(q){
   }
   attempt(0,"");
 }
+/* ---- barcode scanning ----
+   The decoder is pulled from a CDN the first time someone taps Scan, so it
+   costs nothing to anyone who never uses it. Typing the digits always works. */
+var SCAN={lib:null,inst:null,busy:false};
+function scanStatus(t,warn){
+  var e=$("#scanstatus"); if(!e) return;
+  e.textContent=t; e.className="scanstatus"+(warn?" warn":"");
+}
+function loadScanLib(){
+  if(window.Html5Qrcode) return Promise.resolve(true);
+  if(SCAN.lib) return SCAN.lib;
+  SCAN.lib=new Promise(function(res){
+    var sc=document.createElement("script");
+    sc.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";
+    sc.onload=function(){ res(!!window.Html5Qrcode); };
+    sc.onerror=function(){ res(false); };
+    setTimeout(function(){ res(!!window.Html5Qrcode); },12000);
+    document.head.appendChild(sc);
+  });
+  return SCAN.lib;
+}
+function startScan(){
+  var opts;
+  try{
+    var F=window.Html5QrcodeSupportedFormats;
+    if(F) opts={formatsToSupport:[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E],verbose:false};
+  }catch(e){}
+  try{ SCAN.inst=new window.Html5Qrcode("scanbox",opts); }
+  catch(e){ scanStatus("Couldn\u2019t start the scanner. Type the numbers below instead.",1); return; }
+  SCAN.inst.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:150}},
+    function(text){
+      if(SCAN.busy) return;
+      SCAN.busy=true; stopScan(); lookupBarcode(String(text).trim());
+    },function(){})
+   .then(function(){ scanStatus("Point the camera at the barcode."); })
+   .catch(function(){ scanStatus("Camera unavailable. Allow camera access, or type the numbers below.",1); });
+}
+function stopScan(){
+  var i=SCAN.inst; SCAN.inst=null; if(!i) return;
+  try{ i.stop().then(function(){ try{ i.clear(); }catch(e){} },function(){}); }catch(e){}
+}
+function openScan(){
+  SCAN.busy=false;
+  var f=$("#scancode"); if(f) f.value="";
+  scanStatus("Starting camera\u2026");
+  openS("#scansheet");
+  loadScanLib().then(function(ok){
+    if(!$("#scansheet")||$("#scansheet").hidden) return;
+    if(!ok){ scanStatus("Scanner didn\u2019t load. Type the barcode numbers below.",1); return; }
+    startScan();
+  });
+}
+function closeScan(){ stopScan(); SCAN.busy=false; closeS("#scansheet"); }
+function lookupBarcode(code){
+  code=String(code||"").replace(/\D/g,"");
+  if(!/^\d{6,14}$/.test(code)){ scanStatus("That doesn\u2019t look like a barcode.",1); SCAN.busy=false; return; }
+  scanStatus("Looking up "+code+"\u2026");
+  var urls=[
+    "https://world.openfoodfacts.org/api/v2/product/"+code+
+      ".json?fields=product_name,brands,nutriments,serving_size,quantity",
+    "https://search.openfoodfacts.org/search?q="+code+"&page_size=1"
+  ];
+  function go(i){
+    if(i>=urls.length){
+      scanStatus("Couldn\u2019t reach Open Food Facts. Try again, or tap \u201cCreate a food\u201d.",1);
+      SCAN.busy=false; return;
+    }
+    fetch(urls[i]).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+      var prod=d&&(d.product||(d.hits&&d.hits[0])||(d.products&&d.products[0]));
+      var m=prod?offMap(prod):null;
+      if(!m){
+        if(i+1<urls.length){ go(i+1); return; }
+        scanStatus("That barcode isn\u2019t in Open Food Facts. Tap \u201cCreate a food\u201d and enter it from the packet.",1);
+        SCAN.busy=false; return;
+      }
+      var nf={id:uid(),n:m.n,k:m.k,p:m.p,c:m.c,f:m.f,s:m.s,per100:true,src:"off",code:code};
+      state.myFoods=[nf].concat(state.myFoods).slice(0,200);
+      push("myFoods");
+      closeScan();
+      openFood(myFood(nf.id),srchMeal);
+    }).catch(function(){ go(i+1); });
+  }
+  go(0);
+}
 var offTimer=null;
 function offMaybe(q,localCount){
   clearTimeout(offTimer);
@@ -3550,6 +3657,13 @@ $("#srchlist").addEventListener("click",function(e){
   openFood(resolveKey(fk),srchMeal);
 });
 $("#srchnew").addEventListener("click",function(){ openNewFood(null); });
+$("#srchscan").addEventListener("click",openScan);
+$("#scanx").addEventListener("click",closeScan);
+$("#scansheet").addEventListener("click",function(e){ if(e.target===this) closeScan(); });
+$("#scango").addEventListener("click",function(){ SCAN.busy=true; lookupBarcode($("#scancode").value); });
+$("#scancode").addEventListener("keydown",function(e){
+  if(e.key==="Enter"){ e.preventDefault(); SCAN.busy=true; lookupBarcode(this.value); }
+});
 $("#topfoods").addEventListener("click",function(e){
   var b=e.target.closest("[data-top]"); if(!b) return;
   setView("diary",true); openFood(resolveKey(b.dataset.top),"s");
@@ -3807,7 +3921,8 @@ $("#s-reset").addEventListener("click",function(){
 /* keyboard */
 document.addEventListener("keydown",function(e){
   if(e.key!=="Escape") return;
-  ["#searchsheet","#fdsheet","#newsheet","#exsheet","#cele","#skinsheet"].forEach(function(x){ if(!$(x).hidden) closeS(x); });
+  stopScan();
+  ["#searchsheet","#fdsheet","#newsheet","#exsheet","#cele","#skinsheet","#scansheet"].forEach(function(x){ if(!$(x).hidden) closeS(x); });
 });
 /* ═══════ boot ═══════ */
 $("#arcbg").setAttribute("d",arcPath());
